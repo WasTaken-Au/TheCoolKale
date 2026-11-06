@@ -80,3 +80,29 @@ a.card:hover{border-color:var(--kale)}.card.lock{opacity:.45}
 
 @media(max-width:800px){.auth{grid-template-columns:1fr}.auth .hero{border:0;padding-bottom:4vw}.home{grid-template-columns:1fr}.conf{grid-template-columns:1fr}.lesson{font-size:18px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+/* game layer */
+.chips{display:flex;gap:8px;margin-left:12px}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:99px;padding:5px 12px;font-size:14px;font-weight:600;white-space:nowrap}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:22px 0 12px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.tile b{display:block;font-size:34px;line-height:1;font-variant-numeric:tabular-nums}.tile span{color:var(--mute);font-size:14px}
+.xpbar,.bar2{height:8px;border-radius:8px;background:var(--line);overflow:hidden}
+.xpbar i,.bar2 i{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,var(--kale),var(--mark));transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.bar2{margin-top:10px;height:6px}
+.card{transition:transform .2s,border-color .2s;animation:rise .5s both;animation-delay:calc(var(--n,0)*60ms)}
+a.card:hover{transform:translateY(-3px)}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
+.lesson{animation:enter .35s ease-out}
+@keyframes enter{from{opacity:0;transform:translateX(18px)}}
+.opt.ok{animation:pulse .4s}.bigxp{font-size:48px;font-weight:800;color:var(--mark);animation:pulse .8s .2s both}
+@keyframes pulse{50%{transform:scale(1.06)}}
+.shake{animation:shake .4s}
+@keyframes shake{25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.pop{position:fixed;z-index:30;pointer-events:none;font-weight:800;font-size:18px;color:var(--mark);animation:up 1s ease-out forwards}
+@keyframes up{from{transform:translate(-50%,0)}to{transform:translate(-50%,-60px);opacity:0}}
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:40}
+.toast{position:fixed;left:50%;bottom:28px;background:var(--mark);color:#1d1a05;font-weight:700;padding:12px 22px;border-radius:99px;z-index:40;animation:toast 2.6s forwards}
+@keyframes toast{from{opacity:0;transform:translate(-50%,20px)}10%,85%{opacity:1;transform:translate(-50%,0)}to{opacity:0;transform:translate(-50%,0)}}
+@media(max-width:800px){.tiles{grid-template-columns:repeat(2,1fr)}#chX{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}

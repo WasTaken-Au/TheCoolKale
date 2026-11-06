@@ -36,9 +36,22 @@ const flat=s=>s.groups.flatMap(g=>g.topics);
 const subjOf=id=>C.subjects.find(s=>flat(s).some(t=>t.id===id));
 const rich=h=>h.split(/(?:<br>\s*){2,}/).map(p=>'<p>'+p.split('<br>').map(l=>`<span class="ln">${l}</span>`).join('')+'</p>').join('');
 const prog=()=>rec().progress,state=id=>{const p=prog()[id];return p?.done?'done':p?'doing':'new'};
-const main=$('#main');
+const main=$('#main'),still=matchMedia('(prefers-reduced-motion:reduce)').matches;
+const lvl=xp=>Math.floor(xp/100)+1,day=o=>new Date(Date.now()-o*864e5).toLocaleDateString('en-CA');
+const streakNow=s=>s.last===day(0)||s.last===day(1)?s.streak:0;
+function chips(){const s=rec().stats||{xp:0,streak:0},a=$('#chS'),b=$('#chX');if(!a)return;a.textContent='🔥 '+streakNow(s);a.title='Day streak';b.textContent='⭐ Lv '+lvl(s.xp)+' · '+s.xp+' XP'}
+function pop(t,el){const b=el?.getBoundingClientRect(),e=document.createElement('span');e.className='pop';e.textContent=t;e.style.left=(b?b.left+b.width/2:innerWidth/2)+'px';e.style.top=(b?b.top:innerHeight/2)+'px';document.body.append(e);setTimeout(()=>e.remove(),1000)}
+function toast(t){const e=document.createElement('div');e.className='toast';e.textContent=t;document.body.append(e);setTimeout(()=>e.remove(),2700)}
+function confetti(n=150,el){if(still)return;const c=document.createElement('canvas'),r=el?.getBoundingClientRect(),X=r?r.left+r.width/2:innerWidth/2,Y=r?r.top+r.height/2:innerHeight/3,cols=['#86c99a','#f2d65c','#f0847a','#8ec5ff','#fff'];
+ c.className='confetti';c.width=innerWidth;c.height=innerHeight;document.body.append(c);const g=c.getContext('2d'),w=el?9:15;
+ const ps=Array.from({length:n},()=>({x:X,y:Y,vx:(Math.random()-.5)*w*1.4,vy:-Math.random()*w-3,z:4+Math.random()*5,c:cols[Math.random()*5|0],a:Math.random()*6,v:(Math.random()-.5)*.4}));let f=0;
+ (function t(){g.clearRect(0,0,c.width,c.height);ps.forEach(p=>{p.vy+=.35;p.x+=p.vx;p.y+=p.vy;p.a+=p.v;g.save();g.translate(p.x,p.y);g.rotate(p.a);g.fillStyle=p.c;g.globalAlpha=Math.max(0,1-f/150);g.fillRect(-p.z/2,-p.z/4,p.z,p.z/2);g.restore()});++f<150?requestAnimationFrame(t):c.remove()})()}
+function countUp(el,to){if(still||!to){el.textContent=to;return}const t0=performance.now();(function f(t){const p=Math.min(1,(t-t0)/900);el.textContent=Math.round(to*(1-Math.pow(1-p,3)));if(p<1)requestAnimationFrame(f)})(t0)}
+function award(n,el){const r=rec(),s=r.stats||{xp:0,streak:0,last:''},l0=lvl(s.xp);
+ if(s.last!==day(0)){s.streak=s.last===day(1)?s.streak+1:1;s.last=day(0)}s.xp+=n;save(x=>x.stats=s);pop('+'+n+' XP',el);chips();
+ if(lvl(s.xp)>l0){confetti(120);toast('Level up! You’re now level '+lvl(s.xp))}}
 if(P!=='login'){const nav=P==='startup'?'':`<nav aria-label="Main"><a href="home.html"${['home','topics','course'].includes(P)?' aria-current="page"':''}>Learn</a><a href="settings.html"${P==='settings'?' aria-current="page"':''}>Settings</a></nav>`;
- document.body.insertAdjacentHTML('afterbegin',`<header class="bar"><a class="brand" href="home.html">${LEAF}Kale</a>${nav}</header>`)}
+ document.body.insertAdjacentHTML('afterbegin',`<header class="bar"><a class="brand" href="home.html">${LEAF}Kale</a>${nav}${P==='startup'?'':'<div class="chips"><span class="chip" id="chS"></span><span class="chip" id="chX"></span></div>'}</header>`);chips()}
 
 /* ---- Pages ---- */
 const pages={
@@ -70,15 +83,16 @@ startup(){
  show();
 },
 home(){
- const r=rec(),p=r.profile,pr=r.progress;
+ const r=rec(),p=r.profile,pr=r.progress,st=r.stats||{xp:0,streak:0},lv=lvl(st.xp),dn=Object.values(pr).filter(v=>v.done).length;
+ const tiles=`<div class="tiles">${[['Level',lv],['XP',st.xp],['Day streak',streakNow(st)],['Guides done',dn]].map(([l,v])=>`<div class="tile"><b data-count="${v}">0</b><span>${l}</span></div>`).join('')}</div><div class="xpbar"><i data-w="${st.xp%100}%" style="width:0"></i></div><p class="mute" style="font-size:14px">${100-st.xp%100} XP to level ${lv+1}</p>`;
  const cur=Object.entries(pr).filter(([,v])=>!v.done).sort((a,b)=>b[1].t-a[1].t)[0];
  const card=(s,n)=>{const ts=flat(s);if(!ts.length)return`<div class="card lock" aria-disabled="true" style="background-image:url(${s.img})">${s.name}<small>Coming soon</small></div>`;
   const d=ts.filter(t=>state(t.id)==='done').length,sug=s.id==='introduction'&&p.fam!=='I use them often';
-  return`<a class="card${n?'':' wide'}" href="topics.html?s=${s.id}" style="background-image:url(${s.img})">${sug?'<span class="pill">Start here</span>':''}${s.name}<small>${d} of ${ts.length} guides done</small></a>`};
- main.innerHTML=`<div class="home"><div><h1>Hi, ${esc(p.name)}</h1><p class="mute">Pick a subject to learn how its rubrics work.</p>
+  return`<a class="card${n?'':' wide'}" href="topics.html?s=${s.id}" style="--n:${n};background-image:url(${s.img})">${sug?'<span class="pill">Start here</span>':''}${s.name}<small>${d} of ${ts.length} guides done</small><span class="bar2"><i data-w="${d/ts.length*100}%" style="width:0"></i></span></a>`};
+ main.innerHTML=`<div class="home"><div><h1>Hi, ${esc(p.name)}</h1><p class="mute">Pick a subject to learn how its rubrics work.</p>${tiles}
  ${cur?`<div class="panel resume"><div><b>Pick up where you left off</b><br><span class="mute">${esc(C.lessons[cur[0]].title)} · slide ${cur[1].i+1} of ${C.lessons[cur[0]].slides.length}</span></div><a class="btn" href="course.html?t=${cur[0]}">Continue</a></div>`:''}
  <div class="grid">${C.subjects.map((s,n)=>card(s,n)).join('')}</div></div>
- <aside class="notice"><b>Notice</b><p>This web app is a product for a Personal Project. It aims to improve rubric understanding for IB Middle Years Programme students.</p></aside></div>`;
+ <aside class="notice"><b>Notice</b><p>This web app is a product for a Personal Project. It aims to improve rubric understanding for IB Middle Years Programme students.</p></aside></div>`;document.querySelectorAll('[data-count]').forEach(e=>countUp(e,+e.dataset.count));setTimeout(()=>document.querySelectorAll('[data-w]').forEach(e=>e.style.width=e.dataset.w),80);
 },
 topics(){
  const s=C.subjects.find(x=>x.id===new URLSearchParams(location.search).get('s'));
@@ -91,8 +105,8 @@ topics(){
 course(){
  const id=new URLSearchParams(location.search).get('t'),L=C.lessons[id],S=subjOf(id);
  if(!L){location.replace('home.html');return}
- const n=L.slides.length,old=prog()[id]||{},ans=old.a||{};let i=Math.min(old.i||0,n-1);
- const put=(extra={})=>save(r=>r.progress[id]={i,a:ans,done:!!old.done||!!extra.done,t:Date.now()});
+ const n=L.slides.length,old=prog()[id]||{},ans=old.a||{},rew=old.w||{};let mx=old.m||0,i=Math.min(old.i||0,n-1);
+ const put=(extra={})=>save(r=>r.progress[id]={i,a:ans,w:rew,m:mx,done:!!old.done||!!extra.done,t:Date.now()});
  const nextT=(()=>{const f=flat(S);return f[f.findIndex(t=>t.id===id)+1]})();
  const render=()=>{const sl=L.slides[i],q=sl.o,got=ans[i];
   const need=q&&(sl.c!==undefined?got!==sl.c:got===undefined);
@@ -104,14 +118,14 @@ course(){
   const show=k=>{const o=document.querySelectorAll('.opt')[k],fb=$('.fb'),good=sl.c===undefined||k===sl.c;
    o.classList.add(sl.c===undefined?'ok':good?'ok':'bad');fb.className='fb '+(good?'ok':'bad');fb.textContent=sl.a[k]+(good||sl.c===undefined?'':' Try another answer.')};
   document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{const k=+b.dataset.k;
-   document.querySelectorAll('.opt').forEach(x=>x.className='opt');ans[i]=k;put();show(k);
+   document.querySelectorAll('.opt').forEach(x=>x.className='opt');const good=sl.c===undefined||k===sl.c;ans[i]=k;if(good&&!rew[i]){rew[i]=1;award(sl.c===undefined?5:10,b);if(sl.c!==undefined)confetti(40,b)}put();show(k);if(!good)b.classList.add('shake');
    $('#nb').disabled=sl.c!==undefined&&k!==sl.c});
   if(got!==undefined)show(got);
   $('#pb').onclick=()=>{i--;put();render();scrollTo(0,0)};
-  $('#nb').onclick=()=>{if(i<n-1){i++;put();render();scrollTo(0,0)}else{put({done:true});finish()}};
+  $('#nb').onclick=()=>{if(i<n-1){i++;if(i>mx){mx=i;award(3,$('#nb'))}put();render();scrollTo(0,0)}else{const first=!old.done;put({done:true});old.done=true;if(first)award(50);finish(first)}};
  };
- const finish=()=>main.innerHTML=`<div class="done"><h1>Guide complete</h1><p class="mute">${L.title} is done. Nice work.</p>
-  ${nextT?`<a class="btn" href="course.html?t=${nextT.id}">Next: ${nextT.title}</a>`:''}<a class="btn ghost" href="topics.html?s=${S.id}">Back to guides</a></div>`;
+ const finish=first=>(confetti(),main.innerHTML=`<div class="done"><h1>Guide complete</h1><p class="mute">${L.title} is done. Nice work.</p>${first?'<p class="bigxp">+50 XP</p>':''}
+  ${nextT?`<a class="btn" href="course.html?t=${nextT.id}">Next: ${nextT.title}</a>`:''}<a class="btn ghost" href="topics.html?s=${S.id}">Back to guides</a></div>`);
  render();
 },
 settings(){
@@ -122,7 +136,7 @@ settings(){
  <section class="panel"><h2>Account</h2><p class="mute">${guest?'You’re in a guest session. Progress is cleared when you close this tab.':esc(sess().id)}</p><button class="btn ghost" id="out">Log out</button> ${guest?'':'<button class="btn danger" id="del">Delete account</button>'}</section>
  <section class="panel"><h2>Feedback</h2><p>As you’ve read in the Notice, this web app was made for a <b>Personal Project</b>. Thank you for using it. I’d appreciate it if you could spend a few minutes filling out this form.</p><a class="btn" href="https://forms.gle/JX6EAGdDJgThnWUDA" target="_blank" rel="noopener">Open the form</a></section>`;
  $('#pf').onsubmit=e=>{e.preventDefault();const f=e.target;save(r=>{r.profile.name=f.name.value.trim();r.profile.grade=+f.grade.value});$('#saved').textContent='Saved.'};
- $('#reset').onclick=()=>{if(confirm('Reset all progress? This can’t be undone.')){save(r=>r.progress={});location.reload()}};
+ $('#reset').onclick=()=>{if(confirm('Reset all progress? This can’t be undone.')){save(r=>{r.progress={};delete r.stats});location.reload()}};
  $('#out').onclick=logout;
  const d=$('#del');if(d)d.onclick=()=>{if(confirm('Delete your account and all progress? This can’t be undone.')){const u=users();delete u[sess().id];wr(LS,'kale:users',u);logout()}};
 }};
